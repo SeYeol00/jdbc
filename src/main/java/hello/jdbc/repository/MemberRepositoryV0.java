@@ -47,6 +47,10 @@ public class MemberRepositoryV0 {
         }
     }
 
+    public Member findById(String memberId){
+        String sql = "select * from member where member_id = ?";
+    }
+
     private void close(Connection con, Statement stmt, ResultSet rs){
         // 결과 조회할 떄 사용
         if(rs != null) {
