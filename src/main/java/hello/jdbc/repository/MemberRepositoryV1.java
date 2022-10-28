@@ -3,16 +3,25 @@ package hello.jdbc.repository;
 
 import hello.jdbc.connection.DBConnectionUtil;
 import hello.jdbc.domain.Member;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.support.JdbcUtils;
 
+import javax.sql.DataSource;
 import java.sql.*;
 import java.util.NoSuchElementException;
 
 /**
- * JDBC - DriverManager 사용
+ * JDBC - DataSource 사용, JdbcUtils 사용
  */
+
 @Slf4j // jdbc는 데이터베이스를 연결하는 것부터 닫는 순서 모두 개입해야한다.
-public class MemberRepositoryV0 {
+@RequiredArgsConstructor
+public class MemberRepositoryV1 {
+
+    private final DataSource dataSource;
+
+
 
     public Member save(Member member) throws SQLException {
         
@@ -150,36 +159,15 @@ public class MemberRepositoryV0 {
     private void close(Connection con, Statement stmt, ResultSet rs){
         // 닫을 때는 반대 순서로 닫는다.
         // 결과 조회할 떄 사용
-        if(rs != null) {
-            try {
-                rs.close(); // 익셉션이 터지면 밖으로 나간다.
-            } catch (SQLException e) {
-                log.error("error", e);
-            }
-        }
-
-        if(stmt != null){
-            try{
-                stmt.close(); // 익셉션이 터지면 밖으로 나간다.
-            }catch (SQLException e){
-                log.error("error",e);
-            }
-        }
-
-        if(con != null){
-            try{
-                con.close(); // 익셉션이 터지면 밖으로 나간다.
-            }catch (SQLException e){
-                log.error("error",e);
-            }
-        }
-
-
-
+        JdbcUtils.closeResultSet(rs);
+        JdbcUtils.closeStatement(stmt);
+        JdbcUtils.closeConnection(con);
     }
 
 
-    private Connection getConnection() {
-        return DBConnectionUtil.getConnection();
+    private Connection getConnection() throws SQLException {
+        Connection con = dataSource.getConnection();
+        log.info("get connection={}, class={}",con,con.getClass());
+        return con;
     }
 }
