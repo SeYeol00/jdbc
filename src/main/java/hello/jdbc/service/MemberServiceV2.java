@@ -16,7 +16,6 @@ import java.sql.SQLException;
  */
 
 @Slf4j
-@Service
 @RequiredArgsConstructor
 public class MemberServiceV2 {
 

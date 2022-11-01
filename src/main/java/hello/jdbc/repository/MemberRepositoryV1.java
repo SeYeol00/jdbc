@@ -5,6 +5,7 @@ import hello.jdbc.connection.DBConnectionUtil;
 import hello.jdbc.domain.Member;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.support.JdbcUtils;
 
 import javax.sql.DataSource;
@@ -16,11 +17,14 @@ import java.util.NoSuchElementException;
  */
 
 @Slf4j // jdbc는 데이터베이스를 연결하는 것부터 닫는 순서 모두 개입해야한다.
-@RequiredArgsConstructor
 public class MemberRepositoryV1 {
 
     private final DataSource dataSource;
 
+    @Autowired
+    public MemberRepositoryV1(DataSource dataSource) {
+        this.dataSource = dataSource;
+    }
 
 
     public Member save(Member member) throws SQLException {
