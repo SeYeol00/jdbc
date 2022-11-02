@@ -2,28 +2,37 @@ package hello.jdbc.repository;
 
 
 import hello.jdbc.domain.Member;
+import hello.jdbc.repository.ex.MyDbException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.support.JdbcUtils;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+import org.springframework.jdbc.support.SQLExceptionTranslator;
 
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.NoSuchElementException;
 
 /**
- * 트랜잭션 - 트랜잭션 매니저
- * DataSourceUtils.getConnection() -> 커넥션 열 때
- * DataSourceUtils.releaseConnection() -> 커넥션 닫을 때
+ * SQLException Translator 추가
  */
 
 @Slf4j // jdbc는 데이터베이스를 연결하는 것부터 닫는 순서 모두 개입해야한다.
-@RequiredArgsConstructor
-public class MemberRepositoryV3 implements MemberRepositoryEx{
+public class MemberRepositoryV4_2 implements MemberRepository{
 
     private final DataSource dataSource;
+    // 디비 관련 로직 예외처리 변환기, 핵심
+    private final SQLExceptionTranslator exTranslator;
 
-    public Member save(Member member) throws SQLException {
+    public MemberRepositoryV4_2(DataSource dataSource) {
+        this.dataSource = dataSource;
+        //                      구현체 선정
+        this.exTranslator = new SQLErrorCodeSQLExceptionTranslator(dataSource);
+    }
+
+    @Override
+    public Member save(Member member) {
         
         // 날릴 쿼리문          sql인젝션이 생길 수 있기 떄문에 ?를 써서 데이터를 반환하자. -> 파라미터 바인딩
         String sql = "insert into member(member_id, money) values (? , ?)";
@@ -45,9 +54,9 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
 
             return member;
 
-        }catch (SQLException e){
-            log.error("db error",e);
-            throw e;
+        }catch (SQLException e){ // 원인을 넣어야 메세지 확인 가능
+            // 핵심, 알아서 적절한 익셉션을 스프링에서 던져준다.
+            throw exTranslator.translate("save",sql,e);
         }finally{
             // 둘 다 닫아줘야한다. 그래야 트랜젝션이 끝난다.
             // 이걸 리소스 정리라고 한다.
@@ -56,8 +65,8 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             close(con,pstmt,null);
         }
     }
-
-    public Member findById(String memberId) throws SQLException {
+    @Override
+    public Member findById(String memberId) {
         String sql = "select * from member where member_id = ?";
 
 
@@ -85,8 +94,7 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             }
 
         } catch (SQLException e) {
-            log.error("db error",e);
-            throw e;
+            throw exTranslator.translate("findById",sql,e);
         }finally{
             // 둘 다 닫아줘야한다. 그래야 트랜젝션이 끝난다.
             // 이걸 리소스 정리라고 한다.
@@ -97,8 +105,8 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
 
     }
 
-
-    public void update(String memberId, int money) throws SQLException {
+    @Override
+    public void update(String memberId, int money) {
         String sql = "update member set money=? where member_id=?";
 
         Connection con = null;
@@ -117,8 +125,7 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             log.info("resultSize={}",resultSize);
 
         }catch (SQLException e){
-            log.error("db error",e);
-            throw e;
+            throw exTranslator.translate("update",sql,e);
 
         }finally{
             // 둘 다 닫아줘야한다. 그래야 트랜젝션이 끝난다.
@@ -129,8 +136,8 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
         }
     }
 
-
-    public void delete(String memberId) throws SQLException {
+    @Override
+    public void delete(String memberId)  {
         String sql = "delete from member where member_id=?";
 
         Connection con = null;
@@ -146,8 +153,7 @@ public class MemberRepositoryV3 implements MemberRepositoryEx{
             pstmt.executeUpdate();
 
         }catch (SQLException e){
-            log.error("db error",e);
-            throw e;
+            throw exTranslator.translate("delete ",sql,e);
 
         }finally{
             // 둘 다 닫아줘야한다. 그래야 트랜젝션이 끝난다.
